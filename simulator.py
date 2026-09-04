@@ -8,6 +8,7 @@ from agents.models import SystemTaskPayload
 from agents.supervisor import SystemSupervisor
 from agents.base import PHIGuard, SecurityException, AuditLogger
 
+
 def run_simulation(iterations: int = 100):
     print(f"Starting Distributed Component Simulation on Eeg Sleep Stage Spectrogram Agent ({iterations} tasks)...")
     supervisor = SystemSupervisor(model_provider="mock")

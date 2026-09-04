@@ -3,7 +3,6 @@ Command Line Interface for Eeg Sleep Stage Spectrogram Agent.
 """
 import argparse
 import csv
-import json
 import sys
 from agents.models import SystemTaskPayload
 from agents.supervisor import SystemSupervisor
@@ -80,35 +79,53 @@ def main(argv=None):
         return 0
 
     if args.command == "batch":
-        with open(args.input, mode="r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            fieldnames = list(reader.fieldnames or [])
-            rows = list(reader)
+        try:
+            with open(args.input, mode="r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                fieldnames = list(reader.fieldnames or [])
+                rows = list(reader)
+        except FileNotFoundError:
+            print(f"Error: Input file '{args.input}' not found.", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"Error reading input file: {e}", file=sys.stderr)
+            return 1
 
         out_fields = fieldnames + ["overall_urgency", "integrity_status", "total_alerts", "audit_hash"]
         out_rows = []
-        for r in rows:
-            payload = SystemTaskPayload(
-                task_id=r.get("task_id", "TASK-01"),
-                target_identifier=r.get("target_identifier", "TARGET-01"),
-                primary_metric=float(r.get("primary_metric", 15.0)),
-                secondary_metric=float(r.get("secondary_metric", 5.0)),
-                status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
-            )
-            dossier = supervisor.process_task(payload)
-            row_dict = dict(r)
-            row_dict["overall_urgency"] = dossier.overall_urgency.value
-            row_dict["integrity_status"] = dossier.integrity_status.value
-            row_dict["total_alerts"] = dossier.total_alerts
-            row_dict["audit_hash"] = dossier.audit_hash
-            out_rows.append(row_dict)
+        errors = 0
+        for idx, r in enumerate(rows):
+            try:
+                payload = SystemTaskPayload(
+                    task_id=r.get("task_id", f"TASK-{idx+1:04d}"),
+                    target_identifier=r.get("target_identifier", "TARGET-01"),
+                    primary_metric=float(r.get("primary_metric", 15.0)),
+                    secondary_metric=float(r.get("secondary_metric", 5.0)),
+                    status_descriptor=r.get("status_descriptor", "NOMINAL"),
+                    is_critical_flag=r.get("is_critical_flag", "").lower() in ("true", "1", "yes"),
+                )
+                dossier = supervisor.process_task(payload)
+                row_dict = dict(r)
+                row_dict["overall_urgency"] = dossier.overall_urgency.value
+                row_dict["integrity_status"] = dossier.integrity_status.value
+                row_dict["total_alerts"] = dossier.total_alerts
+                row_dict["audit_hash"] = dossier.audit_hash
+                out_rows.append(row_dict)
+            except Exception as e:
+                errors += 1
+                print(f"Warning: Row {idx+1} skipped due to error: {e}", file=sys.stderr)
+                row_dict = dict(r)
+                row_dict["overall_urgency"] = "ERROR"
+                row_dict["integrity_status"] = "ERROR"
+                row_dict["total_alerts"] = 0
+                row_dict["audit_hash"] = ""
+                out_rows.append(row_dict)
 
         with open(args.output, mode="w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=out_fields)
             writer.writeheader()
             writer.writerows(out_rows)
-        print(f"Processed {len(out_rows)} records -> {args.output}")
+        print(f"Processed {len(out_rows)} records ({errors} errors) -> {args.output}")
         return 0
 
     if args.command == "serve":

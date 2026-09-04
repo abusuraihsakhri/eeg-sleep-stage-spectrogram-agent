@@ -1,3 +1,4 @@
+import math
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -42,3 +43,15 @@ def test_coordinator():
 def test_cli():
     assert main(["audit", "--task-id", "CLI-01"]) == 0
     assert main(["chat", "What", "is", "the", "system", "status?"]) == 0
+
+
+def test_frontier_payload_rejects_nan():
+    """FrontierPayload must reject NaN metric values."""
+    with pytest.raises(ValueError, match="finite"):
+        FrontierPayload("T-NAN", "KEY-01", primary_metric=float("nan"), secondary_metric=4.0, status_descriptor="NOMINAL")
+
+
+def test_frontier_payload_rejects_inf():
+    """FrontierPayload must reject Inf metric values."""
+    with pytest.raises(ValueError, match="finite"):
+        FrontierPayload("T-INF", "KEY-01", primary_metric=10.0, secondary_metric=float("inf"), status_descriptor="NOMINAL")

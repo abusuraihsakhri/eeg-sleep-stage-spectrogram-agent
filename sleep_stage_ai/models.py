@@ -4,6 +4,7 @@ Domain: Sleep Medicine AI
 Standard: AASM Manual for Scoring Sleep v2.6
 """
 import datetime
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Any
@@ -25,6 +26,10 @@ class FrontierPayload:
     is_critical_flag: bool = False
     attributes: Dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+
+    def __post_init__(self):
+        if not math.isfinite(self.primary_metric) or not math.isfinite(self.secondary_metric):
+            raise ValueError("Metric values must be finite (not NaN or Inf)")
 
 
 @dataclass

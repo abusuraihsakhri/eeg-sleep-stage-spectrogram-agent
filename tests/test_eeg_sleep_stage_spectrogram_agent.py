@@ -3,6 +3,7 @@ Automated Pytest Test Suite for Eeg Sleep Stage Spectrogram Agent.
 Domain: Clinical & Biomedical AI
 Standard: CAP / CLSI / ISO Standards
 """
+import math
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -63,3 +64,34 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_input_validation_rejects_nan():
+    """SystemTaskPayload must reject NaN metric values."""
+    with pytest.raises(ValueError, match="finite"):
+        SystemTaskPayload(task_id="T-NAN", target_identifier="KEY-01", primary_metric=float("nan"))
+
+
+def test_input_validation_rejects_inf():
+    """SystemTaskPayload must reject Inf metric values."""
+    with pytest.raises(ValueError, match="finite"):
+        SystemTaskPayload(task_id="T-INF", target_identifier="KEY-01", primary_metric=float("inf"))
+
+
+def test_input_validation_rejects_negative_inf():
+    """SystemTaskPayload must reject -Inf metric values."""
+    with pytest.raises(ValueError, match="finite"):
+        SystemTaskPayload(task_id="T-NEG-INF", target_identifier="KEY-01", secondary_metric=float("-inf"))
+
+
+def test_input_validation_accepts_zero():
+    """SystemTaskPayload must accept zero as a valid metric value."""
+    p = SystemTaskPayload(task_id="T-ZERO", target_identifier="KEY-01", primary_metric=0.0, secondary_metric=0.0)
+    assert p.primary_metric == 0.0
+    assert p.secondary_metric == 0.0
+
+
+def test_batch_processing_with_missing_file():
+    """CLI batch command should return error code for missing input file."""
+    result = main(["batch", "-i", "nonexistent_file.csv"])
+    assert result == 1
