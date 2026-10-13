@@ -17,11 +17,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["pydantic>=2.0,<3"]\n\n[project.optional-dependencies]\napi = ["fastapi>=0.100,<1", "uvicorn>=0.23,<1"]\ndev = ["pytest>=8,<10"]
 
 [project.scripts]
 eeg-sleep-stage-spectrogram-engine = "sleep_stage_ai.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/abusuraihsakhri/eeg-sleep-stage-spectrogram-engine"
-Repository = "https://github.com/abusuraihsakhri/eeg-sleep-stage-spectrogram-engine.git"
+Homepage = "https://github.com/abusuraihsakhri/eeg-sleep-stage-spectrogram-agent"
+Repository = "https://github.com/abusuraihsakhri/eeg-sleep-stage-spectrogram-agent.git"
+\n[tool.setuptools.packages.find]\ninclude = ["agents*", "sleep_stage_ai*"]\n
